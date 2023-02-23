@@ -1,11 +1,11 @@
 version: "3"
 services:
   fluentd:
-    container_name: fluentd
+    container_name: fluentd-with-elastic
     user: root
     build:
       context: .
-    image: fluentd
+    image: fluentd-with-elastic:1.0.0
     volumes:
     - /var/lib/docker/containers:/fluentd/log/containers # Example: Reading docker logs
     - ./file:/fluentd/log/files/ #Example: Reading logs from a file
@@ -14,23 +14,26 @@ services:
     logging:
       driver: "local"
   # This app sends logs to Fluentd via HTTP
-  http-myapp:
-    container_name: http-myapp
-    image: alpine
-    volumes:
-    - ./http:/app
-    command: [ /bin/sh , -c , "apk add --no-cache curl && chmod +x /app/app.sh && ./app/app.sh"]
+  # http-myapp:
+  #   container_name: http-myapp
+  #   image: alpine
+  #   volumes:
+  #   - ./http:/app
+  #   command: [ /bin/sh , -c , "apk add --no-cache curl && chmod +x /app/app.sh && ./app/app.sh"]
   # This app writes logs to a local file
-  file-myapp:
-    container_name: file-myapp
-    image: alpine
-    volumes:
-    - ./file:/app
-    command: [ /bin/sh , -c , "chmod +x /app/app.sh && ./app/app.sh"]
+  # file-myapp:
+  #   container_name: file-myapp
+  #   user: root
+  #   image: alpine
+  #   restart: always
+  #   volumes:
+  #   - ./file:/app
+  #   command: [ /bin/sh , -c , "chmod +x /app/app.sh && ./app/app.sh"]
   elasticsearch: # port 9200
     image: elasticsearch:7.9.1
     container_name: elasticsearch
     environment:
+    # - discovery.type=single-node
     - node.name=elasticsearch
     - cluster.initial_master_nodes=elasticsearch
     - bootstrap.memory_lock=true
@@ -47,3 +50,10 @@ services:
     environment:
       ELASTICSEARCH_URL: http://elasticsearch:9200
       ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+  busybox:
+    container_name: busybox
+    image: busybox:latest
+    volumes:
+    - ./file:/app
+    command: ["/bin/sh", "-ec", "i=0; while true; do echo {\"time\":$(date +%s),\"msg\":\"This is my dummy log number ${i}\"}  >> /app/example-log.log ; i=$((i+1)); sleep 1; done"]
+    # command: ["/bin/sh", "-ec", " sh ./app/app.sh"]
